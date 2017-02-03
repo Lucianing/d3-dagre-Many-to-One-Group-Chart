@@ -1,0 +1,42 @@
+.node circle {
+    stroke: #333;
+    fill: #fff;
+}
+.node rect {
+    stroke: #333;
+    fill: #fff;
+}
+.node ellipse {
+    stroke: #333;
+    fill: #fff;
+}
+.node polygon {
+    stroke: #333;
+    fill: #fff;
+}
+.edgePath path {
+    stroke: #333;
+    fill: #333;
+    stroke-width: 1.5px;
+}
+.node .label{
+    color: #000;
+}
+.node .label span{
+    background: #fff;
+    padding: 0 4px;
+    border: solid 1px #000;
+    border-radius: 2px;
+}
+.t-class{
+    background: rgb(241, 242, 247);
+    padding: 0 4px;
+    border: solid 1px #000;
+    border-radius: 2px;
+    font-weight: bold;
+    text-align: center;
+    margin: 0 auto;
+}
+svg{
+    border: solid 1px #ccc;
+}

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>D3 Dagre</title>
+    <link rel="stylesheet" href="css/style.css"/>
+    <script type="text/javascript" src="js/d3.v3.min.js" ></script>
+    <script type="text/javascript" src="js/dagre-d3.js"></script>
+</head>
+<body>
+<script>
+    var nodeData={
+        nodes:[
+            {name:"T1","label":"TableNode",type:"table"},
+            {name:"C1","label":"TableNode",type:"table"},
+            {name:"CL2","label":"DataList",type:"clause"},
+            {name:"T2","label":"TableNode2",type:"table"},
+            {name:"T3","label":"TableNode3",type:"table"},
+            {name:"C2","label":"ColumnData2",type:"column"},
+            {name:"C3","label":"ColumnData3",type:"column"}
+        ],
+        edgeList:[
+            {source:"T1",target:"CL2"},
+            {source:"C1",target:"CL2"},
+            {source:"CL2",target:"T2"},
+            {source:"T2",target:"T3"},
+            {source:"T2",target:"C2"},
+            {source:"T2",target:"C3"}
+        ],
+        group:[
+            {   groupName:"TableNodeGroup",
+                groupList:["T1","C1"]
+            },
+            {   groupName:"ColumnNodeGroup",
+                groupList:["C2","C3"]
+            }
+        ]
+    }
+    var g = new dagreD3.graphlib.Graph().setGraph({});
+    function shuffle(a) {
+        var j, x, i;
+        for (i = a.length; i; i -= 1) {
+            j = Math.floor(Math.random() * i);
+            x = a[i - 1];
+            a[i - 1] = a[j];
+            a[j] = x;
+        }
+        return a;
+    }
+    d3.select('body').append("svg")
+            .attr("width", 1000)
+            .attr("height", 400).append("g");
+
+    var svg = d3.select("body svg"),
+            inner = svg.select("g");
+    var colorRender = d3.scale.category10();
+    function findType(n) {
+        if(n==='table'){
+            return "rect"
+        }else if(n==='column'){
+            return "ellipse"
+        }
+        else if(n==='clause'){
+            return "diamond"
+        }
+    }
+    function render_graph(render) {
+
+        var max_cnt = 100;
+        var iter_cnt = 0;
+        var optimalArray, best_result;
+        while(max_cnt--) {
+            var g = new dagreD3.graphlib.Graph({compound:true})
+                    .setGraph({})
+                    .setDefaultEdgeLabel(function() { return {}; });
+            nodeData.nodes.forEach(function(node) {
+                g.setNode(node.name, { label: node.label,shape:findType(node.type)});
+            });
+            nodeData.group.forEach(function(group) {
+                g.setNode(group.groupName, { style: 'fill:'+colorRender(group.groupName)})
+            });
+            nodeData.group.forEach(function(group) {
+
+                group.groupList.forEach(function(groupData) {
+                    g.setParent(groupData, group.groupName)
+                });
+            });
+            var list = shuffle(nodeData.edgeList);
+            if(!optimalArray) optimalArray = list;
+            nodeData.edgeList.forEach(function(edge){
+                var dataSend=[]
+                dataSend.push(edge.source)
+                dataSend.push(edge.target)
+                g.setEdge.apply(g, dataSend);
+            })
+            g.graph().rankdir = "LR";
+            g.graph().nodesep = 60;
+            render(inner, g);
+            var nn = svg.select(".edgePaths");
+            var paths = nn[0][0];
+            var fc = paths.firstChild;
+            var boxes = [];
+            while(fc) {
+                var path = fc.firstChild.getAttribute("d");
+                var coords = path.split(/,|L/).map(function(c) {
+                    var n = c;
+                    if((c[0]=="M" || c[0]=="L")) n = c.substring(1);
+                    return parseFloat(n);
+                })
+                boxes.push({ left : coords[0], top : coords[1], right : coords[coords.length-2], bottom : coords[coords.length-1]});
+                fc = fc.nextSibling;
+            }
+            // console.log("boxes", boxes);
+            var collisionCnt = 0;
+            boxes.forEach( function(a) {
+                // --> test for collisions against other nodes...
+                boxes.forEach(function(b) {
+                    if(a==b) return;
+                    // test if outside
+                    if ( (a.right  < b.left) ||
+                            (a.left   > b.right) ||
+                            (a.top    > b.bottom) ||
+                            (a.bottom < b.top) ) {
+
+                        // test if inside
+                        if(a.left >= b.left  && a.left <=b.right || a.right >= b.left  && a.right <=b.right) {
+                            if(a.top <= b.top && a.top >= b.bottom) {
+                                collisionCnt++;
+                            }
+                            if(a.bottom <= b.top && a.bottom >= b.bottom) {
+                                collisionCnt++;
+                            }
+                        }
+                    } else {
+                        collisionCnt++;
+                    }
+                })
+            })
+            console.log("collisions ", collisionCnt);
+            if(collisionCnt==0) {
+                optimalArray = list.slice();
+                console.log("Iteration cnt ", iter_cnt);
+                break;
+            }
+            if(typeof(best_result) == "undefined") {
+                best_result = collisionCnt;
+            } else {
+                if(collisionCnt < best_result) {
+                    optimalArray = list.slice();
+                    best_result = collisionCnt;
+                }
+            }
+            iter_cnt++;
+        }
+
+        // if no optimal was found just render what was found...
+        if(best_result >= 0 ) {
+            var g = new dagreD3.graphlib.Graph().setGraph({});
+            nodes.forEach(function(node) {
+                g.setNode(node, { label: node });
+            });
+            optimalArray.forEach(function(edge){
+                g.setEdge.apply(g, edge);
+            })
+            g.graph().rankdir = "LR";
+            g.graph().nodesep = 60;
+            render(inner, g);
+        }
+
+        // Center the graph
+        var initialScale = 1;
+        zoom
+                .translate([(svg.attr("width") - g.graph().width * initialScale) / 2, 20])
+                .scale(initialScale)
+                .event(svg);
+        svg.attr('height', g.graph().height * initialScale + 140);
+
+    }
+    var zoom = d3.behavior.zoom().on("zoom", function() {
+        inner.attr("transform", "translate(" + d3.event.translate + ")" +
+                "scale(" + d3.event.scale + ")");
+    });
+    svg.call(zoom);
+    var render = new dagreD3.render();
+
+    render_graph(render);
+</script>
+</body>
+</html>
