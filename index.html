@@ -110,19 +110,19 @@
                 boxes.push({ left : coords[0], top : coords[1], right : coords[coords.length-2], bottom : coords[coords.length-1]});
                 fc = fc.nextSibling;
             }
-            // console.log("boxes", boxes);
+
             var collisionCnt = 0;
             boxes.forEach( function(a) {
-                // --> test for collisions against other nodes...
+
                 boxes.forEach(function(b) {
                     if(a==b) return;
-                    // test if outside
+
                     if ( (a.right  < b.left) ||
                             (a.left   > b.right) ||
                             (a.top    > b.bottom) ||
                             (a.bottom < b.top) ) {
 
-                        // test if inside
+
                         if(a.left >= b.left  && a.left <=b.right || a.right >= b.left  && a.right <=b.right) {
                             if(a.top <= b.top && a.top >= b.bottom) {
                                 collisionCnt++;
@@ -153,7 +153,7 @@
             iter_cnt++;
         }
 
-        // if no optimal was found just render what was found...
+
         if(best_result >= 0 ) {
             var g = new dagreD3.graphlib.Graph().setGraph({});
             nodes.forEach(function(node) {
@@ -167,7 +167,7 @@
             render(inner, g);
         }
 
-        // Center the graph
+
         var initialScale = 1;
         zoom
                 .translate([(svg.attr("width") - g.graph().width * initialScale) / 2, 20])
